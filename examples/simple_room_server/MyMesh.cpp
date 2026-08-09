@@ -737,6 +737,42 @@ void MyMesh::begin(FILESYSTEM *fs) {
 #endif
 }
 
+#ifdef NEONPOCKET_ROOM_UI
+void MyMesh::copyUiSnapshot(RoomUiSnapshot& dest) {
+  memset(&dest, 0, sizeof(dest));
+  dest.uptime_secs = uptime_millis / 1000;
+  dest.packets_recv = radio_driver.getPacketsRecv();
+  dest.packets_sent = radio_driver.getPacketsSent();
+  dest.battery_mv = board.getBattMilliVolts();
+  dest.tx_queue = _mgr->getOutboundTotal();
+  dest.posts_total = _num_posted;
+  dest.posts_pushed = _num_post_pushes;
+  dest.clients = acl.getNumClients();
+  dest.noise_floor = (int16_t)_radio->getNoiseFloor();
+  dest.last_rssi = (int16_t)radio_driver.getLastRSSI();
+  dest.last_snr_x4 = (int8_t)(radio_driver.getLastSNR() * 4);
+  dest.external_power = board.isExternalPowered();
+#ifdef NRF52_POWER_MANAGEMENT
+  dest.boot_mv = board.getBootVoltage();
+#endif
+
+  for (int i = 0; i < acl.getNumClients(); i++) {
+    const uint8_t role = acl.getClientByIdx(i)->permissions & PERM_ACL_ROLE_MASK;
+    if (role == PERM_ACL_ADMIN) dest.admins++;
+    else if (role == PERM_ACL_READ_WRITE) dest.writers++;
+    else dest.readers++;
+  }
+
+  for (int i = 0; i < MAX_UNSYNCED_POSTS; i++) {
+    if (posts[i].post_timestamp != 0) dest.buffered_posts++;
+  }
+  if (dest.buffered_posts != 0) {
+    const int latest = (next_post_idx + MAX_UNSYNCED_POSTS - 1) % MAX_UNSYNCED_POSTS;
+    snprintf(dest.latest_post, sizeof(dest.latest_post), "%s", posts[latest].text);
+  }
+}
+#endif
+
 void MyMesh::sendFloodScoped(const TransportKey& scope, mesh::Packet* pkt, uint32_t delay_millis, uint8_t path_hash_size) {
   if (scope.isNull()) {
     sendFlood(pkt, delay_millis, path_hash_size);

@@ -11,6 +11,10 @@ VolatileRTCClock fallback_clock;
 AutoDiscoverRTCClock rtc_clock(fallback_clock);
 EnvironmentSensorManager sensors;
 
+#ifdef DISPLAY_CLASS
+DISPLAY_CLASS display(SPI1);
+#endif
+
 bool radio_init() {
   rtc_clock.begin(Wire);
   return radio.std_init(&SPI);

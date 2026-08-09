@@ -7,11 +7,17 @@
 #include <helpers/radiolib/CustomSX1262Wrapper.h>
 #include <helpers/radiolib/RadioLibWrappers.h>
 #include <helpers/sensors/EnvironmentSensorManager.h>
+#ifdef DISPLAY_CLASS
+#include <helpers/ui/NV3001BDisplay.h>
+#endif
 
 extern HeltecRC52Board board;
 extern WRAPPER_CLASS radio_driver;
 extern AutoDiscoverRTCClock rtc_clock;
 extern EnvironmentSensorManager sensors;
+#ifdef DISPLAY_CLASS
+extern DISPLAY_CLASS display;
+#endif
 
 bool radio_init();
 mesh::LocalIdentity radio_new_identity();
