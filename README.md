@@ -20,7 +20,7 @@ Experimental MeshCore repeater and Room Server firmware for the Heltec RadioCore
 
 The Room Server profiles keep 32 recent posts in RAM and expose the standard MeshCore room/client protocol. A reboot clears those buffered posts. The TFT profile adds a required 56,320-byte framebuffer, 8-row delta flushing, animated NeonPocketMC startup, Home/RF/Clients/Posts/Power pages, a 60-second screen timeout, and a 16 KB post-display memory gate. Both Room Server profiles use the user button for next/wake and two-hold System OFF confirmation.
 
-### Planned `v1.1.0-rc.1` release files
+### `v1.1.0-rc.1` release files
 
 | Role | Download this file |
 |---|---|
@@ -29,7 +29,7 @@ The Room Server profiles keep 32 recent posts in RAM and expose the standard Mes
 | Room Server, TFT | `NeonPocketMC-RC52-Room-Server-TFT-v1.1.0-rc.1.uf2` |
 | Room Server setup helper | `NeonPocketMC-RC52-Room-Server-Configurator-v1.1.0-rc.1.zip` |
 
-These names are reserved for the planned prerelease. If `v1.1.0-rc.1` is not visible on the repository's [Releases page](https://github.com/n30nex/NeonPocketMC-RC52-Repeater/releases), do not substitute a similarly named Actions artifact or another RC52 image.
+[`v1.1.0-rc.1`](https://github.com/n30nex/NeonPocketMC-RC52-Repeater/releases/tag/v1.1.0-rc.1) is available now. Use only the exact files above from that release; do not substitute a similarly named Actions artifact or another RC52 image.
 
 ## Repeater profile
 
@@ -112,7 +112,7 @@ GitHub Actions builds the exact repeater plus both Room Server environments, ver
 
 ## Status
 
-[`v1.0.0-rc.1`](https://github.com/n30nex/NeonPocketMC-RC52-Repeater/releases/tag/v1.0.0-rc.1) remains the original experimental repeater-only release. The three application filenames above and Room Server configurator are planned for `v1.1.0-rc.1`; they are not released merely because an Actions build exists. Room Server remains prerelease firmware until exact Actions artifacts are published and RC52 hardware qualification completes.
+[`v1.0.0-rc.1`](https://github.com/n30nex/NeonPocketMC-RC52-Repeater/releases/tag/v1.0.0-rc.1) remains the original experimental repeater-only release. [`v1.1.0-rc.1`](https://github.com/n30nex/NeonPocketMC-RC52-Repeater/releases/tag/v1.1.0-rc.1) is the current experimental prerelease and includes the repeater, both Room Server profiles, and configurator named above. Its images are exact-main CI artifacts; the new Room Server profiles were not physically re-tested on the RC52 qualification unit for this candidate.
 
 The RC52 BLE companion firmware is a separate repository and image. Do not interchange companion, repeater, Room Server, RCC6, or alternate RC52 hardware files.
 
