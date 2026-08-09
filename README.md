@@ -18,6 +18,14 @@ Experimental MeshCore repeater and Room Server firmware for the Heltec RadioCore
 | `heltec_rc52_room_server_headless` | MeshCore Room Server for outdoor/headless use | Off |
 | `heltec_rc52_room_server_tft` | Room Server with native 220x128 NeonPocket dashboard | On |
 
+### TFT demo-scene startup
+
+<p align="center">
+  <img src="https://raw.githubusercontent.com/n30nex/NeonPocketMC/main/docs/images/demoscene/neonpocket-splash.gif" alt="NeonPocketMC animated demo-scene boot sequence" width="660">
+</p>
+
+The TFT Room Server uses this shared visual sequence with Room Server status text. The GIF is a direct framebuffer capture from the RCC6 implementation; the RC52 renderer uses the same geometry, palette, cadence, and effects. Headless Room Server and repeater images intentionally show no animation and keep the TFT off.
+
 The Room Server profiles keep 32 recent posts in RAM and expose the standard MeshCore room/client protocol. A reboot clears those buffered posts. The TFT profile adds a required 56,320-byte framebuffer, 8-row delta flushing, animated NeonPocketMC startup, Home/RF/Clients/Posts/Power pages, a 60-second screen timeout, and a 16 KB post-display memory gate. Both Room Server profiles use the user button for next/wake and two-hold System OFF confirmation.
 
 ### `v1.1.0-rc.1` release files
