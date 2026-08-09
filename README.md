@@ -18,7 +18,18 @@ Experimental MeshCore repeater and Room Server firmware for the Heltec RadioCore
 | `heltec_rc52_room_server_headless` | MeshCore Room Server for outdoor/headless use | Off |
 | `heltec_rc52_room_server_tft` | Room Server with native 220x128 NeonPocket dashboard | On |
 
-The Room Server profiles keep 32 buffered posts and expose the standard MeshCore room/client protocol. The TFT profile adds a required 56,320-byte framebuffer, 8-row delta flushing, animated NeonPocketMC startup, Home/RF/Clients/Posts/Power pages, a 60-second screen timeout, and a 16 KB post-display memory gate. Both Room Server profiles use the user button for next/wake and two-hold System OFF confirmation.
+The Room Server profiles keep 32 recent posts in RAM and expose the standard MeshCore room/client protocol. A reboot clears those buffered posts. The TFT profile adds a required 56,320-byte framebuffer, 8-row delta flushing, animated NeonPocketMC startup, Home/RF/Clients/Posts/Power pages, a 60-second screen timeout, and a 16 KB post-display memory gate. Both Room Server profiles use the user button for next/wake and two-hold System OFF confirmation.
+
+### Planned `v1.1.0-rc.1` release files
+
+| Role | Download this file |
+|---|---|
+| Repeater | `NeonPocketMC-RC52-Repeater-v1.1.0-rc.1.uf2` |
+| Room Server, headless | `NeonPocketMC-RC52-Room-Server-Headless-v1.1.0-rc.1.uf2` |
+| Room Server, TFT | `NeonPocketMC-RC52-Room-Server-TFT-v1.1.0-rc.1.uf2` |
+| Room Server setup helper | `NeonPocketMC-RC52-Room-Server-Configurator-v1.1.0-rc.1.zip` |
+
+These names are reserved for the planned prerelease. If `v1.1.0-rc.1` is not visible on the repository's [Releases page](https://github.com/n30nex/NeonPocketMC-RC52-Repeater/releases), do not substitute a similarly named Actions artifact or another RC52 image.
 
 ## Repeater profile
 
@@ -48,32 +59,39 @@ Never connect an unregulated panel directly to RC52 `VBAT`, `5V`, or USB. See [S
 
 Room Server users should configure the unit while USB and a tuned antenna are still attached. The guided setup sets the room name, a legal regional radio preset, TX power, **3-byte advert hashes**, and new admin/guest passwords; it does not retain or print the passwords.
 
-- Windows: extract the release package and double-click `Configure-RC52-Room-Windows.cmd`.
-- Linux: extract it and run `sh configure-rc52-room-linux.sh`.
+- Download and extract `NeonPocketMC-RC52-Room-Server-Configurator-v1.1.0-rc.1.zip` from the same release as the Room Server UF2.
+- Windows: double-click `Configure-RC52-Room-Windows.cmd`.
+- Linux: run `sh configure-rc52-room-linux.sh` from the extracted folder.
 - Advanced/manual setup: open a 115200-baud USB terminal and use `set name`, `set radio`, `set tx`, `set path.hash.mode 2`, `password`, and `set guest.password`.
 
 The compile-time `password` / `hello` values are onboarding defaults only. **Do not deploy a room server until the wizard has replaced both.** Keep the resulting credentials private. The TFT reports raw battery millivolts, warns at or below 3.45 V, and clears the warning at or above 3.60 V; it does not claim a calibrated percentage and does not automatically shut down on low voltage.
 
-## Repeater install
+## Install any profile
 
-1. Download `NeonPocketMC-RC52-Repeater.uf2` from the latest release.
-2. Double-press reset to mount the RC52 UF2 bootloader drive.
-3. Copy the UF2 to that drive and wait for the device to reboot.
-4. Open its USB serial console at 115200 baud.
-5. Immediately change the default admin password, set the repeater name, and configure the legal regional radio parameters.
+1. Download the one exact `.uf2` matching the intended role from the GitHub Release table above and verify it against that release's checksum file. The `.hex` files are for development/recovery tooling and are not the normal install path.
+2. Connect the RC52 over USB and double-press reset to mount its UF2 bootloader drive.
+3. Copy only that `.uf2` to the drive. Wait for the copy to finish and for the RC52 to reboot.
+4. Keep USB and a tuned LoRa antenna attached while completing the role-specific setup below.
 
-The release UF2 starts at application address `0x26000`. It does not replace the bootloader or SoftDevice. Full instructions: [Flashing](docs/FLASHING.md).
+Every listed UF2 is an **application-only** image starting at `0x26000`. Copying it through the existing UF2 bootloader does not erase or replace the bootloader or SoftDevice. Never perform a whole-chip erase for a normal update. Full instructions: [Flashing](docs/FLASHING.md).
+
+### Repeater first setup
+
+Open the USB serial console at 115200 baud. Immediately change the default admin password, set the repeater name, and configure legal regional radio parameters:
 
 Useful first-run commands:
 
 ```text
 set name <your repeater name>
 password <a strong password>
-set freq <legal regional frequency>
+set radio <frequency>,<bandwidth>,<spreading factor>,<coding rate>
+set tx <legal transmit power>
 powersaving on
 ```
 
 Use `help` and the upstream [MeshCore CLI reference](https://docs.meshcore.io/cli_commands) for the complete radio/preset setup. Do not transmit until the frequency, bandwidth, spreading factor, coding rate, and local regulations are correct.
+
+For either Room Server role, use the guided Room Server setup above instead. Do not deploy with the onboarding `password` / `hello` credentials.
 
 ## Hardware mapping
 
@@ -94,7 +112,9 @@ GitHub Actions builds the exact repeater plus both Room Server environments, ver
 
 ## Status
 
-`v1.0.0-rc.1` is the original experimental repeater release. Room Server artifacts are newer prerelease candidates until exact Actions builds and RC52 hardware qualification complete. The RC52 BLE companion firmware is a separate repository and image; do not interchange them.
+[`v1.0.0-rc.1`](https://github.com/n30nex/NeonPocketMC-RC52-Repeater/releases/tag/v1.0.0-rc.1) remains the original experimental repeater-only release. The three application filenames above and Room Server configurator are planned for `v1.1.0-rc.1`; they are not released merely because an Actions build exists. Room Server remains prerelease firmware until exact Actions artifacts are published and RC52 hardware qualification completes.
+
+The RC52 BLE companion firmware is a separate repository and image. Do not interchange companion, repeater, Room Server, RCC6, or alternate RC52 hardware files.
 
 ## License
 
