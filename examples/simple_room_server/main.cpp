@@ -1,5 +1,6 @@
 #include <Arduino.h>   // needed for PlatformIO
 #include <Mesh.h>
+#include <stdlib.h>
 
 #include "MyMesh.h"
 
@@ -13,17 +14,88 @@
   static UITask ui_task(display);
 #endif
 
+#if defined(RC52_ROOM_SERVER) && !defined(DISPLAY_CLASS) && defined(PIN_USER_BTN)
+  #include <helpers/ui/MomentaryButton.h>
+  static MomentaryButton headless_power_button(PIN_USER_BTN, 1500, true, true, false);
+  static unsigned long headless_power_armed_until = 0;
+  static bool headless_wait_for_release = false;
+#endif
+
 StdRNG fast_rng;
 SimpleMeshTables tables;
 MyMesh the_mesh(board, radio_driver, *new ArduinoMillis(), fast_rng, rtc_clock, tables);
 
 void halt() {
+#ifdef RC52_ROOM_SERVER
+  while (1) delay(1000);
+#else
   while (1) ;
+#endif
 }
+
+#ifdef RC52_ROOM_SERVER
+static void fatalHalt(const char* serial_message, const char* title, const char* detail) {
+  Serial.print("FATAL: ");
+  Serial.println(serial_message);
+#if defined(DISPLAY_CLASS) && defined(NEONPOCKET_ROOM_UI)
+  ui_task.showFatal(title, detail);
+#else
+  (void)title;
+  (void)detail;
+#endif
+  halt();
+}
+
+#ifdef NEONPOCKET_MEMORY_GATE_BYTES
+static bool probeRequiredMemory() {
+  void* probe = malloc(NEONPOCKET_MEMORY_GATE_BYTES);
+  if (!probe) return false;
+  free(probe);
+  return true;
+}
+#endif
+#endif
 
 static char command[MAX_POST_TEXT_LEN+1];
 #ifdef ETHERNET_ENABLED
 static char ethernet_command[MAX_POST_TEXT_LEN+1];
+#endif
+
+#if defined(RC52_ROOM_SERVER) && !defined(DISPLAY_CLASS) && defined(PIN_USER_BTN)
+static void pollHeadlessPowerButton() {
+  const unsigned long now = millis();
+  if (headless_wait_for_release) {
+    if (!headless_power_button.isPressed()) {
+      headless_power_button.cancelClick();
+      headless_wait_for_release = false;
+    }
+    return;
+  }
+
+  if (headless_power_armed_until &&
+      (int32_t)(now - headless_power_armed_until) >= 0) {
+    headless_power_armed_until = 0;
+    Serial.println("POWER: system-off request expired");
+  }
+
+  const int event = headless_power_button.check();
+  if (event == BUTTON_EVENT_CLICK) {
+    if (headless_power_armed_until) {
+      headless_power_armed_until = 0;
+      Serial.println("POWER: system-off request cancelled");
+    }
+  } else if (event == BUTTON_EVENT_LONG_PRESS) {
+    if (headless_power_armed_until &&
+        (int32_t)(headless_power_armed_until - now) >= 0) {
+      Serial.println("POWER: confirmed; entering system off");
+      delay(100);
+      board.powerOff();
+    } else {
+      headless_power_armed_until = now + 8000;
+      Serial.println("POWER: hold again within 8 seconds to enter system off");
+    }
+  }
+}
 #endif
 
 void setup() {
@@ -32,6 +104,11 @@ void setup() {
 
   board.begin();
 
+#if defined(RC52_ROOM_SERVER) && !defined(DISPLAY_CLASS) && defined(PIN_USER_BTN)
+  headless_power_button.begin();
+  headless_wait_for_release = headless_power_button.isPressed();
+#endif
+
 #ifdef HAS_EXTERNAL_WATCHDOG
   external_watchdog.begin();
 #endif
@@ -39,19 +116,50 @@ void setup() {
 #ifdef DISPLAY_CLASS
   if (display.begin()) {
     display.startFrame();
+  #ifdef NEONPOCKET_ROOM_UI
+    display.setColor(0x07FF);
+    display.drawRect(8, 8, 204, 112);
+    display.setColor(0xFFFF);
+    display.setTextSize(2);
+    display.drawTextCentered(110, 42, "NEONPOCKET");
+    display.setTextSize(1);
+    display.drawTextCentered(110, 73, "STARTING ROOM SERVER");
+  #else
     display.setCursor(0, 0);
     display.print("Please wait...");
+  #endif
     display.endFrame();
+  } else {
+    Serial.println("FATAL: display/framebuffer initialization failed; direct rendering disabled");
+  #ifdef DISPLAY_REQUIRED
+    halt();
+  #endif
   }
 #endif
 
-  if (!radio_init()) { halt(); }
+  if (!radio_init()) {
+#ifdef RC52_ROOM_SERVER
+    fatalHalt("radio initialization failed", "RADIO FAILED", "CHECK RF HARDWARE / RESET");
+#else
+    halt();
+#endif
+  }
 
   fast_rng.begin(radio_driver.getRngSeed());
 
   FILESYSTEM* fs;
 #if defined(NRF52_PLATFORM)
-  InternalFS.begin();
+  const bool fs_ready = InternalFS.begin();
+#ifdef FILESYSTEM_REQUIRED
+  if (!fs_ready) {
+  #ifdef RC52_ROOM_SERVER
+    fatalHalt("InternalFS mount failed; data was not formatted",
+        "STORAGE FAILED", "DATA NOT ERASED");
+  #else
+    halt();
+  #endif
+  }
+#endif
   fs = &InternalFS;
   IdentityStore store(InternalFS, "");
 #elif defined(RP2040_PLATFORM)
@@ -72,7 +180,15 @@ void setup() {
     while (count < 10 && (the_mesh.self_id.pub_key[0] == 0x00 || the_mesh.self_id.pub_key[0] == 0xFF)) {  // reserved id hashes
       the_mesh.self_id = radio_new_identity(); count++;
     }
-    store.save("_main", the_mesh.self_id);
+    if (!store.save("_main", the_mesh.self_id)) {
+#ifdef FILESYSTEM_REQUIRED
+  #ifdef RC52_ROOM_SERVER
+      fatalHalt("room identity could not be saved", "STORAGE FAILED", "IDENTITY NOT SAVED");
+  #else
+      halt();
+  #endif
+#endif
+    }
   }
 
   Serial.print("Room ID: ");
@@ -88,7 +204,19 @@ void setup() {
   the_mesh.begin(fs);
 
 #ifdef DISPLAY_CLASS
+  #ifdef NEONPOCKET_ROOM_UI
+  ui_task.begin(the_mesh, the_mesh.getNodePrefs(), FIRMWARE_BUILD_DATE, FIRMWARE_VERSION);
+  #else
   ui_task.begin(the_mesh.getNodePrefs(), FIRMWARE_BUILD_DATE, FIRMWARE_VERSION);
+  #endif
+#endif
+
+#if defined(RC52_ROOM_SERVER) && defined(NEONPOCKET_MEMORY_GATE_BYTES)
+  if (!probeRequiredMemory()) {
+    fatalHalt("post-display 16 KB memory gate failed",
+        "MEMORY FAILED", "16 KB HEADROOM REQUIRED");
+  }
+  Serial.println("NeonPocket: post-display 16 KB memory gate passed");
 #endif
 
 #ifdef ETHERNET_ENABLED
@@ -152,6 +280,9 @@ void loop() {
   sensors.loop();
 #ifdef DISPLAY_CLASS
   ui_task.loop();
+#endif
+#if defined(RC52_ROOM_SERVER) && !defined(DISPLAY_CLASS) && defined(PIN_USER_BTN)
+  pollHeadlessPowerButton();
 #endif
   rtc_clock.tick();
 #ifdef HAS_EXTERNAL_WATCHDOG

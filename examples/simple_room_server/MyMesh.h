@@ -88,6 +88,29 @@ struct PostInfo {
   char text[MAX_POST_TEXT_LEN+1];
 };
 
+#ifdef NEONPOCKET_ROOM_UI
+struct RoomUiSnapshot {
+  uint32_t uptime_secs;
+  uint32_t packets_recv;
+  uint32_t packets_sent;
+  uint16_t battery_mv;
+  uint16_t boot_mv;
+  uint16_t tx_queue;
+  uint16_t posts_total;
+  uint16_t posts_pushed;
+  uint8_t clients;
+  uint8_t admins;
+  uint8_t writers;
+  uint8_t readers;
+  uint8_t buffered_posts;
+  int16_t noise_floor;
+  int16_t last_rssi;
+  int8_t last_snr_x4;
+  bool external_power;
+  char latest_post[55];
+};
+#endif
+
 class MyMesh : public mesh::Mesh, public CommonCLICallbacks {
   FILESYSTEM* _fs;
   uint32_t last_millis;
@@ -186,6 +209,9 @@ public:
   NodePrefs* getNodePrefs() {
     return &_prefs;
   }
+#ifdef NEONPOCKET_ROOM_UI
+  void copyUiSnapshot(RoomUiSnapshot& dest);
+#endif
 
   void savePrefs() override {
     _cli.savePrefs(_fs);

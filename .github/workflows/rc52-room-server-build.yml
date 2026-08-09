@@ -1,0 +1,116 @@
+name: RC52 Room Server Build
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+      - codex/**
+  pull_request:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  configurator:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out exact source
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+
+      - name: Verify setup helper
+        run: python scripts/configure_rc52_room.py --self-test
+
+      - name: Package setup helper
+        shell: bash
+        run: |
+          mkdir -p release-configurator
+          python - <<'PY'
+          import hashlib
+          import zipfile
+          from pathlib import Path
+
+          root = Path('.')
+          out = root / 'release-configurator'
+          archive_path = out / 'NeonPocketMC-RC52-Room-Configurator.zip'
+          files = (
+              'Configure-RC52-Room-Windows.cmd',
+              'configure-rc52-room-linux.sh',
+              'scripts/configure_rc52_room.py',
+              'README.md',
+          )
+          with zipfile.ZipFile(archive_path, 'w', zipfile.ZIP_DEFLATED) as archive:
+              for name in files:
+                  archive.write(root / name, name)
+          digest = hashlib.sha256(archive_path.read_bytes()).hexdigest()
+          (out / 'SHA256SUMS').write_text(
+              f'{digest}  {archive_path.name}\n', encoding='ascii')
+          PY
+
+      - name: Upload setup helper
+        uses: actions/upload-artifact@v4
+        with:
+          name: NeonPocketMC-RC52-Room-Configurator-${{ github.event.pull_request.head.sha || github.sha }}
+          if-no-files-found: error
+          retention-days: 14
+          path: release-configurator/
+
+  firmware:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        environment:
+          - heltec_rc52_room_server_headless
+          - heltec_rc52_room_server_tft
+          - heltec_rc52_repeater
+
+    steps:
+      - name: Check out exact source
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+
+      - name: Verify checkout
+        shell: bash
+        run: test "$(git rev-parse HEAD)" = "${{ github.event.pull_request.head.sha || github.sha }}"
+
+      - name: Set up build environment
+        uses: ./.github/actions/setup-build-environment
+
+      - name: Build ${{ matrix.environment }}
+        run: pio run -e ${{ matrix.environment }}
+
+      - name: Create application UF2
+        if: startsWith(matrix.environment, 'heltec_rc52_room_server_')
+        run: pio run -e ${{ matrix.environment }} -t create_uf2
+
+      - name: Verify RC52 room-server application
+        if: startsWith(matrix.environment, 'heltec_rc52_room_server_')
+        shell: bash
+        run: |
+          build=".pio/build/${{ matrix.environment }}"
+          test -s "$build/firmware.hex"
+          test -s "$build/firmware.uf2"
+          test "$(($(stat -c%s "$build/firmware.uf2") % 512))" -eq 0
+          python bin/uf2conv/uf2conv.py -i "$build/firmware.uf2" | tee "$build/uf2-info.txt"
+          grep -qi '0xada52840' "$build/uf2-info.txt"
+          grep -qi 'Target Address is 0x00026000' "$build/uf2-info.txt"
+          sha256sum "$build/firmware.uf2" "$build/firmware.hex" > "$build/SHA256SUMS"
+
+      - name: Upload exact room-server candidate
+        if: startsWith(matrix.environment, 'heltec_rc52_room_server_')
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.environment }}-${{ github.event.pull_request.head.sha || github.sha }}
+          if-no-files-found: error
+          retention-days: 14
+          path: |
+            .pio/build/${{ matrix.environment }}/firmware.uf2
+            .pio/build/${{ matrix.environment }}/firmware.hex
+            .pio/build/${{ matrix.environment }}/SHA256SUMS
+            .pio/build/${{ matrix.environment }}/uf2-info.txt

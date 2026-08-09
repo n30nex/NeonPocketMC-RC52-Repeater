@@ -16,4 +16,5 @@ cmake-*
 compile_commands.json
 .venv/
 venv/
+.neonpocket-venv/
 platformio.local.ini

@@ -44,6 +44,7 @@ void HeltecRC52Board::begin() {
 uint16_t HeltecRC52Board::getBattMilliVolts() {
   analogReadResolution(12);
   analogReference(AR_INTERNAL_3_0);
+  pinMode(PIN_BAT_CTL, OUTPUT);
   digitalWrite(PIN_BAT_CTL, HIGH);
   delay(10);
   const int adc = analogRead(PIN_VBAT_READ);
