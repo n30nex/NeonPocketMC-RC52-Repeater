@@ -115,15 +115,9 @@ void setup() {
 
 #ifdef DISPLAY_CLASS
   if (display.begin()) {
-    display.startFrame();
+    display.startFrame(0x0000);
   #ifdef NEONPOCKET_ROOM_UI
-    display.setColor(0x07FF);
-    display.drawRect(8, 8, 204, 112);
-    display.setColor(0xFFFF);
-    display.setTextSize(2);
-    display.drawTextCentered(110, 42, "NEONPOCKET");
-    display.setTextSize(1);
-    display.drawTextCentered(110, 73, "STARTING ROOM SERVER");
+    // The animated renderer starts after radio and storage pass their gates.
   #else
     display.setCursor(0, 0);
     display.print("Please wait...");
