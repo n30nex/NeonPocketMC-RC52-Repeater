@@ -4,13 +4,11 @@
 
 #ifdef NEONPOCKET_ROOM_UI
 
+#include "NeonPocketSplash.h"
+
 #ifndef AUTO_OFF_MILLIS
 #define AUTO_OFF_MILLIS 60000
 #endif
-#ifndef BOOT_SCREEN_MILLIS
-#define BOOT_SCREEN_MILLIS 3200
-#endif
-#define BOOT_FRAME_MILLIS 80
 #ifndef ROOM_POWER_CONFIRM_MILLIS
 #define ROOM_POWER_CONFIRM_MILLIS 8000
 #endif
@@ -23,7 +21,6 @@
 
 static constexpr ColorVal NEON_BG = 0x0000;
 static constexpr ColorVal NEON_PANEL = 0x0841;
-static constexpr ColorVal NEON_GRID = 0x082C;
 static constexpr ColorVal NEON_CYAN = 0x07FF;
 static constexpr ColorVal NEON_COBALT = 0x225F;
 static constexpr ColorVal NEON_LIME = 0x87E0;
@@ -37,64 +34,23 @@ static bool timerReached(unsigned long now, unsigned long deadline) {
   return (int32_t)(now - deadline) >= 0;
 }
 
-static void drawBootGrid(DisplayDriver* display, uint8_t frame) {
-  display->setColor(NEON_GRID);
-  for (int x = 10; x < 220; x += 20) display->fillRect(x, 0, 1, 96);
-  for (int y = 8; y < 96; y += 16) display->fillRect(0, y, 220, 1);
-
-  const int raster = 3 + (frame * 3) % 91;
-  display->setColor(NEON_PANEL);
-  display->fillRect(0, raster, 220, 2);
-  display->setColor(NEON_COBALT);
-  display->fillRect(0, (raster + 37) % 94, 220, 1);
+static void copyShortVersion(char* dest, size_t size, const char* version) {
+  snprintf(dest, size, "%s", version ? version : "");
+  char* dash = strchr(dest, '-');
+  if (dash) *dash = 0;
 }
 
-static void drawBootSparks(DisplayDriver* display, uint8_t frame) {
-  for (uint8_t i = 0; i < 9; i++) {
-    const int x = (i * 47 + frame * (2 + i % 3)) % 220;
-    const int y = 4 + (i * 19 + frame * (1 + (i & 1))) % 86;
-    display->setColor(((frame + i) & 3) == 0 ? NEON_LIME
-        : (i & 1 ? NEON_CYAN : NEON_COBALT));
-    display->fillRect(x, y, i % 3 == 0 ? 3 : 1, 1);
-  }
-}
-
-static void drawRevealedRect(DisplayDriver* display, ColorVal color,
-    int x, int y, int w, int h, uint8_t reveal, uint8_t step, int sweep) {
-  if (reveal < step) return;
-  const int middle = x + w / 2;
-  display->setColor(abs(middle - sweep) <= 2 ? NEON_WHITE : color);
-  display->fillRect(x, y, w, h);
-}
-
-static void drawPocketMesh(DisplayDriver* display, uint8_t reveal, int sweep) {
-  const int x = 91;
-  const int y = 5;
-
-  drawRevealedRect(display, NEON_CYAN, x + 5, y, 28, 2, reveal, 1, sweep);
-  drawRevealedRect(display, NEON_CYAN, x + 1, y + 4, 2, 18, reveal, 2, sweep);
-  drawRevealedRect(display, NEON_CYAN, x + 35, y + 4, 2, 18, reveal, 3, sweep);
-  drawRevealedRect(display, NEON_CYAN, x + 3, y + 22, 5, 2, reveal, 4, sweep);
-  drawRevealedRect(display, NEON_CYAN, x + 30, y + 22, 5, 2, reveal, 4, sweep);
-  drawRevealedRect(display, NEON_CYAN, x + 7, y + 24, 7, 2, reveal, 5, sweep);
-  drawRevealedRect(display, NEON_CYAN, x + 24, y + 24, 7, 2, reveal, 5, sweep);
-  drawRevealedRect(display, NEON_CYAN, x + 13, y + 26, 12, 2, reveal, 6, sweep);
-
-  drawRevealedRect(display, NEON_COBALT, x + 18, y + 10, 2, 5, reveal, 7, sweep);
-  drawRevealedRect(display, NEON_COBALT, x + 12, y + 15, 7, 2, reveal, 8, sweep);
-  drawRevealedRect(display, NEON_COBALT, x + 19, y + 15, 7, 2, reveal, 8, sweep);
-  drawRevealedRect(display, NEON_COBALT, x + 10, y + 17, 2, 4, reveal, 9, sweep);
-  drawRevealedRect(display, NEON_COBALT, x + 26, y + 17, 2, 4, reveal, 9, sweep);
-  drawRevealedRect(display, NEON_COBALT, x + 12, y + 20, 15, 2, reveal, 10, sweep);
-
-  drawRevealedRect(display, NEON_LIME, x + 17, y + 7, 5, 5, reveal, 7, sweep);
-  drawRevealedRect(display, NEON_LIME, x + 8, y + 19, 5, 5, reveal, 10, sweep);
-  drawRevealedRect(display, NEON_LIME, x + 25, y + 19, 5, 5, reveal, 10, sweep);
+void UITask::primeBoot(const char* firmware_version, const char* build_date) {
+  copyShortVersion(_version_info, sizeof(_version_info), firmware_version);
+  snprintf(_build_info, sizeof(_build_info), "%s", build_date ? build_date : "");
+  _display->turnOn();
+  _display->startFrame(NEON_BG);
+  renderBoot(0);
+  _display->endFrame();
 }
 
 void UITask::begin(MyMesh& mesh, NodePrefs* node_prefs, const char* build_date,
     const char* firmware_version) {
-  (void)build_date;
   _mesh = &mesh;
   _node_prefs = node_prefs;
   _page = 0;
@@ -104,12 +60,10 @@ void UITask::begin(MyMesh& mesh, NodePrefs* node_prefs, const char* build_date,
   _wait_for_release = false;
   _battery_low = false;
   _boot_started = millis();
-  _boot_until = _boot_started + BOOT_SCREEN_MILLIS;
+  _boot_until = _boot_started + NeonPocketSplash::DURATION_MILLIS;
   _auto_off = _boot_started + AUTO_OFF_MILLIS;
-  snprintf(_version_info, sizeof(_version_info), "%s",
-      firmware_version ? firmware_version : "");
-  char* dash = strchr(_version_info, '-');
-  if (dash) *dash = 0;
+  copyShortVersion(_version_info, sizeof(_version_info), firmware_version);
+  snprintf(_build_info, sizeof(_build_info), "%s", build_date ? build_date : "");
 #ifdef PIN_USER_BTN
   _button.begin();
   _wait_for_release = _button.isPressed();
@@ -133,64 +87,9 @@ void UITask::showFatal(const char* title, const char* detail) {
   _display->endFrame();
 }
 
-void UITask::renderBoot() {
-  const unsigned long elapsed = millis() - _boot_started;
-  const uint8_t frame = elapsed / BOOT_FRAME_MILLIS;
-  const uint8_t reveal = min(10UL, 1 + elapsed / 110UL);
-  const unsigned long bounded = min((unsigned long)BOOT_SCREEN_MILLIS, elapsed);
-  const int progress = 180 * bounded / BOOT_SCREEN_MILLIS;
-  const int sweep = 85 + 58 * bounded / BOOT_SCREEN_MILLIS;
-
-  drawBootGrid(_display, frame);
-  drawBootSparks(_display, frame);
-  drawPocketMesh(_display, reveal, sweep);
-
-  if (elapsed >= 160) {
-    _display->setTextSize(2);
-    if (elapsed < 720) {
-      const int jitter = (frame % 3) - 1;
-      _display->setColor(NEON_COBALT);
-      _display->drawTextCentered(108 - jitter, 43, "NEONPOCKETMC");
-      _display->setColor(NEON_CYAN);
-      _display->drawTextCentered(112 + jitter, 41, "NEONPOCKETMC");
-    }
-    _display->setColor(NEON_LIME);
-    _display->drawTextCentered(110, 42, "NEONPOCKETMC");
-  }
-
-  if (elapsed >= 400) {
-    _display->setTextSize(1);
-    _display->setColor(NEON_CYAN);
-    _display->drawTextCentered(110, 65, "ROOM SERVER");
-  }
-
-  const char* status = elapsed < 640 ? "DISPLAY ONLINE"
-      : elapsed < 1280 ? "RADIO BUS ONLINE"
-      : elapsed < 1920 ? "IDENTITY READY"
-      : elapsed < 2560 ? "ROOM SERVICES"
-      : "MESH READY";
-  _display->setTextSize(1);
-  _display->setColor(NEON_WHITE);
-  _display->drawTextCentered(110, 79, status);
-
-  _display->setColor(NEON_COBALT);
-  _display->drawRect(18, 94, 184, 8);
-  _display->setColor(NEON_CYAN);
-  _display->fillRect(20, 96, progress, 4);
-  if (progress > 4) {
-    _display->setColor(NEON_LIME);
-    _display->fillRect(17 + progress, 95, 4, 6);
-    _display->setColor(NEON_WHITE);
-    _display->fillRect(19 + progress, 96, 1, 4);
-  }
-
-  char percent[8];
-  snprintf(percent, sizeof(percent), "%lu%%", 100UL * bounded / BOOT_SCREEN_MILLIS);
-  _display->setColor(NEON_CYAN);
-  _display->setCursor(18, 110);
-  _display->print(_version_info);
-  _display->setColor(NEON_LIME);
-  _display->drawTextRightAlign(202, 110, percent);
+void UITask::renderBoot(unsigned long elapsed) {
+  NeonPocketSplash::draw(*_display, NeonPocketSplash::frameForElapsed(elapsed),
+      _version_info, _build_info);
 }
 
 void UITask::renderPowerConfirm() {
@@ -436,11 +335,12 @@ void UITask::loop() {
   if (timerReached(now, _next_refresh)) {
     _display->startFrame(NEON_BG);
     const bool booting = !timerReached(now, _boot_until);
-    if (booting) renderBoot();
+    if (booting) renderBoot(now - _boot_started);
     else if (_power_armed_until) renderPowerConfirm();
     else renderCurrent();
     _display->endFrame();
-    _next_refresh = now + (booting ? BOOT_FRAME_MILLIS : (_power_armed_until ? 250 : 1000));
+    _next_refresh = now + (booting ? NeonPocketSplash::FRAME_MILLIS
+        : (_power_armed_until ? 250 : 1000));
   }
   if (timerReached(now, _auto_off)) _display->turnOff();
 }

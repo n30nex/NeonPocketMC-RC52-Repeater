@@ -115,14 +115,14 @@ void setup() {
 
 #ifdef DISPLAY_CLASS
   if (display.begin()) {
-    display.startFrame(0x0000);
   #ifdef NEONPOCKET_ROOM_UI
-    // The animated renderer starts after radio and storage pass their gates.
+    ui_task.primeBoot(FIRMWARE_VERSION, FIRMWARE_BUILD_DATE);
   #else
+    display.startFrame();
     display.setCursor(0, 0);
     display.print("Please wait...");
-  #endif
     display.endFrame();
+  #endif
   } else {
     Serial.println("FATAL: display/framebuffer initialization failed; direct rendering disabled");
   #ifdef DISPLAY_REQUIRED
