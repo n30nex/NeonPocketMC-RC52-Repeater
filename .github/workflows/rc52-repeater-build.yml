@@ -1,0 +1,88 @@
+name: RC52 Repeater Build
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+      - codex/**
+  pull_request:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out exact source
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+
+      - name: Verify checkout
+        shell: bash
+        run: test "$(git rev-parse HEAD)" = "${{ github.event.pull_request.head.sha || github.sha }}"
+
+      - name: Set up build environment
+        uses: ./.github/actions/setup-build-environment
+
+      - name: Run upstream unit tests
+        run: pio test -e native -e native_kiss_modem -vv
+
+  firmware:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        environment:
+          - heltec_rc52_repeater
+          - Heltec_t114_without_display_repeater
+
+    steps:
+      - name: Check out exact source
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+
+      - name: Verify checkout
+        shell: bash
+        run: test "$(git rev-parse HEAD)" = "${{ github.event.pull_request.head.sha || github.sha }}"
+
+      - name: Set up build environment
+        uses: ./.github/actions/setup-build-environment
+
+      - name: Build ${{ matrix.environment }}
+        run: pio run -e ${{ matrix.environment }}
+
+      - name: Create RC52 application UF2
+        if: matrix.environment == 'heltec_rc52_repeater'
+        run: pio run -e heltec_rc52_repeater -t create_uf2
+
+      - name: Verify and package RC52 application
+        if: matrix.environment == 'heltec_rc52_repeater'
+        shell: bash
+        run: |
+          build=.pio/build/heltec_rc52_repeater
+          dist="$build/release"
+          mkdir -p "$dist"
+          test -s "$build/firmware.hex"
+          test -s "$build/firmware.uf2"
+          test "$(($(stat -c%s "$build/firmware.uf2") % 512))" -eq 0
+          python bin/uf2conv/uf2conv.py -i "$build/firmware.uf2" | tee "$dist/uf2-info.txt"
+          grep -qi '0xada52840' "$dist/uf2-info.txt"
+          grep -qi 'Target Address is 0x00026000' "$dist/uf2-info.txt"
+          cp "$build/firmware.uf2" "$dist/NeonPocketMC-RC52-Repeater.uf2"
+          cp "$build/firmware.hex" "$dist/NeonPocketMC-RC52-Repeater.hex"
+          (cd "$dist" && sha256sum NeonPocketMC-RC52-Repeater.uf2 NeonPocketMC-RC52-Repeater.hex > SHA256SUMS)
+
+      - name: Upload exact RC52 repeater artifacts
+        if: matrix.environment == 'heltec_rc52_repeater'
+        uses: actions/upload-artifact@v4
+        with:
+          name: NeonPocketMC-RC52-Repeater-${{ github.event.pull_request.head.sha || github.sha }}
+          if-no-files-found: error
+          path: .pio/build/heltec_rc52_repeater/release/
+          retention-days: 14

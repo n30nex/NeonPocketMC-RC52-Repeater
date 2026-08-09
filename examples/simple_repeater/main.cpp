@@ -30,7 +30,8 @@ static char ethernet_command[160];
 // For power saving
 unsigned long POWERSAVING_FIRSTSLEEP_SECS = 120; // The first sleep (if enabled) from boot
 
-#if defined(PIN_USER_BTN) && defined(_SEEED_SENSECAP_SOLAR_H_)
+#if defined(PIN_USER_BTN) && !defined(DISPLAY_CLASS) && \
+    (defined(_SEEED_SENSECAP_SOLAR_H_) || defined(HEADLESS_USER_BUTTON_POWEROFF))
 static unsigned long userBtnDownAt = 0;
 #define USER_BTN_HOLD_OFF_MILLIS 1500
 #endif
@@ -40,6 +41,11 @@ void setup() {
   delay(1000);
 
   board.begin();
+
+#if defined(PIN_USER_BTN) && !defined(DISPLAY_CLASS) && \
+    (defined(_SEEED_SENSECAP_SOLAR_H_) || defined(HEADLESS_USER_BUTTON_POWEROFF))
+  pinMode(PIN_USER_BTN, INPUT_PULLUP);
+#endif
 
 #ifdef HAS_EXTERNAL_WATCHDOG
   external_watchdog.begin();
@@ -69,7 +75,14 @@ void setup() {
 
   FILESYSTEM* fs;
 #if defined(NRF52_PLATFORM) || defined(STM32_PLATFORM)
+#ifdef FILESYSTEM_REQUIRED
+  if (!InternalFS.begin()) {
+    Serial.println("ERROR: internal filesystem mount failed; refusing to continue");
+    halt();
+  }
+#else
   InternalFS.begin();
+#endif
   fs = &InternalFS;
   IdentityStore store(InternalFS, "");
 #elif defined(ESP32)
@@ -170,8 +183,9 @@ void loop() {
   }
 #endif
 
-#if defined(PIN_USER_BTN) && defined(_SEEED_SENSECAP_SOLAR_H_) && !defined(DISPLAY_CLASS)
-  // Hold the user button to power off the SenseCAP Solar repeater.
+#if defined(PIN_USER_BTN) && !defined(DISPLAY_CLASS) && \
+    (defined(_SEEED_SENSECAP_SOLAR_H_) || defined(HEADLESS_USER_BUTTON_POWEROFF))
+  // Hold the user button to power off a headless repeater.
   int btnState = digitalRead(PIN_USER_BTN);
   if (btnState == LOW) {
     if (userBtnDownAt == 0) {
