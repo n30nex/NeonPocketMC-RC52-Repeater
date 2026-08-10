@@ -22,11 +22,12 @@ class UITask {
   bool _wait_for_release;
   bool _battery_low;
   char _version_info[24];
+  char _build_info[16];
 #ifdef PIN_USER_BTN
   MomentaryButton _button;
 #endif
 
-  void renderBoot();
+  void renderBoot(unsigned long elapsed);
   void renderPowerConfirm();
   void renderHeader(const char* title);
   void renderFooter();
@@ -43,6 +44,7 @@ public:
       , _button(PIN_USER_BTN, 1500, true, true, false)
 #endif
       { }
+  void primeBoot(const char* firmware_version, const char* build_date);
   void begin(MyMesh& mesh, NodePrefs* node_prefs, const char* build_date,
       const char* firmware_version);
   void showFatal(const char* title, const char* detail);

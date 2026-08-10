@@ -115,20 +115,14 @@ void setup() {
 
 #ifdef DISPLAY_CLASS
   if (display.begin()) {
-    display.startFrame();
   #ifdef NEONPOCKET_ROOM_UI
-    display.setColor(0x07FF);
-    display.drawRect(8, 8, 204, 112);
-    display.setColor(0xFFFF);
-    display.setTextSize(2);
-    display.drawTextCentered(110, 42, "NEONPOCKET");
-    display.setTextSize(1);
-    display.drawTextCentered(110, 73, "STARTING ROOM SERVER");
+    ui_task.primeBoot(FIRMWARE_VERSION, FIRMWARE_BUILD_DATE);
   #else
+    display.startFrame();
     display.setCursor(0, 0);
     display.print("Please wait...");
-  #endif
     display.endFrame();
+  #endif
   } else {
     Serial.println("FATAL: display/framebuffer initialization failed; direct rendering disabled");
   #ifdef DISPLAY_REQUIRED

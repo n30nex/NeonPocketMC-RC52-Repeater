@@ -82,6 +82,10 @@ jobs:
       - name: Set up build environment
         uses: ./.github/actions/setup-build-environment
 
+      - name: Verify TFT-only demoscene splash
+        if: matrix.environment == 'heltec_rc52_room_server_tft'
+        run: python scripts/verify_rc52_demoscene_splash.py
+
       - name: Build ${{ matrix.environment }}
         run: pio run -e ${{ matrix.environment }}
 
