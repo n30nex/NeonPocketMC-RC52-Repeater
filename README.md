@@ -30,16 +30,16 @@ The TFT Room Server uses this shared visual sequence with Room Server status tex
 
 The Room Server profiles keep 32 recent posts in RAM and expose the standard MeshCore room/client protocol. A reboot clears those buffered posts. The TFT profile adds a required 56,320-byte framebuffer, 8-row delta flushing, animated NeonPocketMC startup, Home/RF/Clients/Posts/Power pages, a 60-second screen timeout, and a 16 KB post-display memory gate. Both Room Server profiles use the user button for next/wake and two-hold System OFF confirmation.
 
-### `v1.1.0-rc.1` release files
+### `v1.1.0-rc.2` release files
 
 | Role | Download this file |
 |---|---|
-| Repeater | `NeonPocketMC-RC52-Repeater-v1.1.0-rc.1.uf2` |
-| Room Server, headless | `NeonPocketMC-RC52-Room-Server-Headless-v1.1.0-rc.1.uf2` |
-| Room Server, TFT | `NeonPocketMC-RC52-Room-Server-TFT-v1.1.0-rc.1.uf2` |
-| Room Server setup helper | `NeonPocketMC-RC52-Room-Server-Configurator-v1.1.0-rc.1.zip` |
+| Repeater | `NeonPocketMC-RC52-Repeater-v1.1.0-rc.2.uf2` |
+| Room Server, headless | `NeonPocketMC-RC52-Room-Server-Headless-v1.1.0-rc.2.uf2` |
+| Room Server, TFT | `NeonPocketMC-RC52-Room-Server-TFT-v1.1.0-rc.2.uf2` |
+| Room Server setup helper | `NeonPocketMC-RC52-Room-Server-Configurator-v1.1.0-rc.2.zip` |
 
-[`v1.1.0-rc.1`](https://github.com/n30nex/NeonPocketMC-RC52-Repeater/releases/tag/v1.1.0-rc.1) is available now. Use only the exact files above from that release; do not substitute a similarly named Actions artifact or another RC52 image.
+[`v1.1.0-rc.2`](https://github.com/n30nex/NeonPocketMC-RC52-Repeater/releases/tag/v1.1.0-rc.2) is available now. Use only the exact files above from that release; do not substitute a similarly named Actions artifact or another RC52 image.
 
 ## Repeater profile
 
@@ -69,7 +69,7 @@ Never connect an unregulated panel directly to RC52 `VBAT`, `5V`, or USB. See [S
 
 Room Server users should configure the unit while USB and a tuned antenna are still attached. The guided setup sets the room name, a legal regional radio preset, TX power, **3-byte advert hashes**, and new admin/guest passwords; it does not retain or print the passwords.
 
-- Download and extract `NeonPocketMC-RC52-Room-Server-Configurator-v1.1.0-rc.1.zip` from the same release as the Room Server UF2.
+- Download and extract `NeonPocketMC-RC52-Room-Server-Configurator-v1.1.0-rc.2.zip` from the same release as the Room Server UF2.
 - Windows: double-click `Configure-RC52-Room-Windows.cmd`.
 - Linux: run `sh configure-rc52-room-linux.sh` from the extracted folder.
 - Advanced/manual setup: open a 115200-baud USB terminal and use `set name`, `set radio`, `set tx`, `set path.hash.mode 2`, `password`, and `set guest.password`.
@@ -122,7 +122,7 @@ GitHub Actions builds the exact repeater plus both Room Server environments, ver
 
 ## Status
 
-[`v1.0.0-rc.1`](https://github.com/n30nex/NeonPocketMC-RC52-Repeater/releases/tag/v1.0.0-rc.1) remains the original experimental repeater-only release. [`v1.1.0-rc.1`](https://github.com/n30nex/NeonPocketMC-RC52-Repeater/releases/tag/v1.1.0-rc.1) is the current experimental prerelease and includes the repeater, both Room Server profiles, and configurator named above. Its images are exact-main CI artifacts; the new Room Server profiles were not physically re-tested on the RC52 qualification unit for this candidate.
+[`v1.0.0-rc.1`](https://github.com/n30nex/NeonPocketMC-RC52-Repeater/releases/tag/v1.0.0-rc.1) remains the original experimental repeater-only release. [`v1.1.0-rc.2`](https://github.com/n30nex/NeonPocketMC-RC52-Repeater/releases/tag/v1.1.0-rc.2) is current and includes the repeater, both Room Server profiles, and configurator named above. Its images are exact-main CI artifacts; the Room Server profiles were not physically re-tested on the RC52 qualification unit for this candidate.
 
 The RC52 BLE companion firmware is a separate repository and image. Do not interchange companion, repeater, Room Server, RCC6, or alternate RC52 hardware files.
 
