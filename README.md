@@ -10,6 +10,8 @@ Experimental MeshCore repeater and Room Server firmware for the Heltec RadioCore
 
 > **RC52-L62 only. Do not flash this on RCC6, RC32, T114, or another RC52 radio/display variant.**
 
+**Guided install:** [flasher.canadaverse.org](https://flasher.canadaverse.org/)
+
 ## Choose a build
 
 | PlatformIO environment | Purpose | TFT |
