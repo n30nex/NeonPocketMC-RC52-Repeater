@@ -5,7 +5,6 @@ on:
   push:
     branches:
       - main
-      - codex/**
   pull_request:
     branches:
       - main
@@ -86,3 +85,17 @@ jobs:
           if-no-files-found: error
           path: .pio/build/heltec_rc52_repeater/release/
           retention-days: 14
+
+  required-repeater:
+    name: required-repeater
+    if: ${{ always() }}
+    needs: [test, firmware]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Require tests and every repeater image
+        env:
+          TEST_RESULT: ${{ needs.test.result }}
+          FIRMWARE_RESULT: ${{ needs.firmware.result }}
+        run: |
+          test "$TEST_RESULT" = success
+          test "$FIRMWARE_RESULT" = success

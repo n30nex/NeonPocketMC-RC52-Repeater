@@ -5,7 +5,6 @@ on:
   push:
     branches:
       - main
-      - codex/**
   pull_request:
     branches:
       - main
@@ -118,3 +117,17 @@ jobs:
             .pio/build/${{ matrix.environment }}/firmware.hex
             .pio/build/${{ matrix.environment }}/SHA256SUMS
             .pio/build/${{ matrix.environment }}/uf2-info.txt
+
+  required-room-server:
+    name: required-room-server
+    if: ${{ always() }}
+    needs: [configurator, firmware]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Require configurator and every room-server image
+        env:
+          CONFIGURATOR_RESULT: ${{ needs.configurator.result }}
+          FIRMWARE_RESULT: ${{ needs.firmware.result }}
+        run: |
+          test "$CONFIGURATOR_RESULT" = success
+          test "$FIRMWARE_RESULT" = success
